@@ -1,25 +1,49 @@
 # moodle2pdf
 
-Download a whole **Moodle course** and turn its documents into **PDFs**, one folder per section,
-with an `INDEX.md` listing what was saved, skipped or failed.
+**Turn a whole Moodle course into a clean folder of PDFs, in one command.**
 
-Useful for offline revision, archiving a course before you lose access, or feeding course
-material to other tools.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 
-- Works with your normal sign-in (including university single sign-on): **you** sign in in a real
-  browser window; the tool never sees your password.
-- PDFs kept as is; Word/PowerPoint converted to PDF; HTML resources (even multi-page ones) printed
-  to PDF; Moodle "pages" printed to PDF; folders and zips unpacked.
-- Re-running only fetches what's missing.
+Slides, Word handouts, multi-page HTML lessons, Moodle pages: everything becomes a PDF, sorted
+by section, with an index. Read it offline, print it, annotate it on a tablet, keep it after the
+semester ends, or hand it to an AI assistant to make revision notes.
 
-## Requirements
+```bash
+python moodle2pdf.py "https://moodle.example.org/course/view.php?id=1234"
+```
 
-- Python 3.10+
-- Chromium via Playwright (installed below)
-- **Windows + Microsoft Office** only for converting `.doc/.docx/.ppt/.pptx`. Everything else
-  works on Windows, macOS and Linux; on other systems Office files are reported as FAILED.
+```
+courses/Networks 101/
+├── INDEX.md                      ← what was saved, skipped or failed
+├── 01 Introduction/
+│   └── Course outline.pdf
+├── 02 Chapter 1 - TCP_IP/
+│   ├── Slides chapter 1.pdf      ← was a .pptx
+│   └── Lesson online.pdf         ← a 40-page HTML site, merged into one PDF
+└── 03 Exercises/
+    ├── Worksheet 1.pdf           ← was a .docx
+    ├── Lab files.zip
+    └── Lab files/                ← the zip, extracted
+```
 
-## Install
+## Why moodle2pdf?
+
+- **Everything ends up as PDF.** No more `.pptx`, `.docx` and loose HTML files you can't open on
+  your phone. One format to read, search, annotate and print.
+- **Multi-page HTML lessons become one PDF.** Many teachers upload small websites (MkDocs, exported
+  slides). Downloading `index.html` alone gives you one page; moodle2pdf follows the links and merges
+  every page in order.
+- **Works like you do: through the normal course page.** It doesn't need Moodle's mobile-app web
+  service, which some institutions disable.
+- **Your password stays yours.** You sign in yourself in a real browser window, so university single
+  sign-on (CAS) works. The tool only keeps the session cookies, locally.
+- **Honest output.** If something can't be converted, it's marked FAILED in `INDEX.md` with the
+  reason, never saved as a broken file.
+- **Pick what you want.** `--list` numbers every item; `--only 3,7-9` gets just those.
+
+## Quick start
 
 ```bash
 git clone https://github.com/Allouche-Adam/moodle2pdf.git
@@ -28,20 +52,19 @@ python -m venv .venv
 # Windows: .venv\Scripts\activate     macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 python -m playwright install chromium
+
+python moodle2pdf.py "https://your-moodle/course/view.php?id=1234" --list   # see what's there
+python moodle2pdf.py "https://your-moodle/course/view.php?id=1234"          # get it all
 ```
 
-## Use
+On the first run a browser window opens: sign in, wait until the course page shows, and the
+window closes by itself. Later runs are silent until your Moodle session expires. Re-running only
+fetches what's missing.
 
-```bash
-python moodle2pdf.py "https://moodle.example.org/course/view.php?id=1234"
-```
+> **`.moodle-session.json` gives access to your Moodle account.** It stays next to the script, is
+> in `.gitignore`, and must never be shared.
 
-1. First run (or when your Moodle session expires): a browser window opens. Sign in there and
-   wait until the course page shows; the window then closes by itself (5-minute limit).
-2. The login cookies are saved in `.moodle-session.json` next to the script so later runs are
-   silent. **This file gives access to your Moodle account: never commit or share it.** It is in
-   `.gitignore`.
-3. Files land in `courses/<course name>/`, one folder per section, plus `INDEX.md`.
+## Options
 
 | Option | Does |
 |---|---|
@@ -56,12 +79,12 @@ python moodle2pdf.py "https://moodle.example.org/course/view.php?id=1234"
 A partial run (`--only`, `--choose`) doesn't rewrite `INDEX.md`, so the index keeps describing the
 whole course.
 
-## What it does with each item
+## What happens to each item
 
 | Moodle item | Result |
 |---|---|
 | File: PDF | kept as is |
-| File: Word / PowerPoint | converted to PDF with installed Office (Windows) |
+| File: Word / PowerPoint | converted to PDF with installed Microsoft Office (Windows only) |
 | File: zip | extracted next to itself |
 | File: HTML | printed to PDF, **with every page it links to in the same folder** (max 60), merged in link order |
 | Page | printed to PDF |
@@ -69,18 +92,38 @@ whole course.
 | Link to a file on the same Moodle | downloaded |
 | Other links, quizzes, forums… | listed in `INDEX.md` only |
 
-It fails loudly instead of guessing: if Moodle answers with a web page where a file was expected
-(a notice, an error page), the item is marked FAILED with the page title rather than saved as a
-fake PDF.
+## Requirements
+
+- Python 3.10+ and Chromium through Playwright (installed in the quick start).
+- **Windows + Microsoft Office** only for converting Word/PowerPoint. Everything else works on
+  Windows, macOS and Linux; elsewhere, Office files are reported as FAILED.
 
 ## Known limits
 
 - **Sign-in detection** looks for `/login/` in the address or `cas` in the host name. Moodles that
-  sign in through another provider (e.g. Microsoft, Shibboleth) may not open the sign-in window and
-  stop with *"Found no sections on the page"*. Contributions welcome.
-- Reads the standard Moodle 3.x/4.x course page (`li.section`, `li.activity`). Heavily customised
-  themes or the "one section per page" layout may show fewer items.
+  sign in through another provider (Microsoft, Shibboleth…) may not open the sign-in window and stop
+  with *"Found no sections on the page"*. A fix is welcome.
+- Reads the standard Moodle 3.x/4.x course page. Heavily customised themes or the "one section per
+  page" layout may show fewer items.
 - One saved session at a time: switching to another Moodle asks you to sign in again.
+
+## Alternatives
+
+| Tool | Best when |
+|---|---|
+| **moodle2pdf** | you want a readable folder of PDFs, including HTML lessons merged into one file |
+| [Moodle-DL](https://github.com/C0D3D3V/Moodle-DL) | you want *everything* (assignments, forums, quizzes, videos) kept in sync, in original formats, and your Moodle has the mobile web service enabled |
+| [moodle-downloader](https://github.com/harsilspatel/moodle-downloader) | you prefer a Chrome extension to batch-download files by hand |
+
+## Contributing
+
+Issues and pull requests are welcome, especially:
+- sign-in detection for Microsoft / Shibboleth / other single sign-on providers;
+- reports of Moodle themes or layouts where `--list` misses items (please include your Moodle
+  version, not your course content);
+- Office conversion on macOS/Linux (e.g. through LibreOffice).
+
+If moodle2pdf saved you time, a ⭐ helps other students find it.
 
 Only download material you're allowed to access, and respect your institution's rules on sharing it.
 

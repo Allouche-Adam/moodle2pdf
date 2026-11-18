@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- README rewritten for new users: one-line pitch, example output folder, "Why moodle2pdf?",
+  quick start, an Alternatives table (Moodle-DL, moodle-downloader) and contribution ideas.
+
 ## 1.0.0 (2026-11-18)
 
 First public release.
