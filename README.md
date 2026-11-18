@@ -22,7 +22,7 @@ material to other tools.
 ## Install
 
 ```bash
-git clone https://github.com/<owner>/moodle2pdf.git
+git clone https://github.com/Allouche-Adam/moodle2pdf.git
 cd moodle2pdf
 python -m venv .venv
 # Windows: .venv\Scripts\activate     macOS/Linux: source .venv/bin/activate
